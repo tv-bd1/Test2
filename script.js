@@ -923,7 +923,7 @@ const channels = [
     "category": "bangla",
     "url": "https://biostar-tv-world.vercel.app/?id=bijoy-tv"
   }
-]
+],
 
 let currentChannel = 0;
 let player = null;
