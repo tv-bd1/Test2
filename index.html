@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rs Live 247 | Premium Stream</title>
+  <title>Rs Live 247 | Premium</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -15,20 +15,17 @@
   <div class="container">
     <div class="main">
       <div id="player"></div>
-      
       <div class="marquee-container">
         <span class="bell-icon"><i class="fa fa-bell"></i></span>
         <marquee behavior="scroll" direction="left" scrollamount="4">
-          আপনার পছন্দের যেকোনো চ্যানেল দেখতে পাশের লিস্ট থেকে ক্লিক করুন অথবা কি-বোর্ড অ্যারো বাটন ব্যবহার করুন। খেলা দেখতে T Sports বা GTV সিলেক্ট করুন।
+          আপনার পছন্দের যেকোনো চ্যানেল দেখতে পাশের লিস্ট থেকে ক্লিক করুন। খেলা দেখতে T Sports, GTV বা Star Sports সিলেক্ট করুন। 
         </marquee>
       </div>
-
       <div class="controls">
-        <button onclick="prevChannel()"><i class="fas fa-step-backward"></i> Prev</button>
-        <button onclick="nextChannel()">Next <i class="fas fa-step-forward"></i></button>
+        <button onclick="prevChannel()"><i class="fas fa-backward"></i> Prev</button>
+        <button onclick="nextChannel()">Next <i class="fas fa-forward"></i></button>
       </div>
     </div>
-
     <div class="sidebar">
       <div class="search-container">
         <input type="text" id="searchInput" placeholder="Search channels..." oninput="searchChannels()">
