@@ -1,10 +1,9 @@
-// আপনার চ্যানেলের ডাটাবেস (সংক্ষিপ্ত রাখা হয়েছে, আপনি আপনার পুরো লিস্ট এখানে বসাবেন)
 const channels = [
   { "id": "2026", "name": "Fancode 2026", "logo": "https://www.fancode.com/skillup-uploads/cms-media/140086_5928_RLS_DW_FC-Web_1769807667662.jpg", "url": "https://biostar-tv-world.vercel.app/?id=2026" },
   { "id": "btv", "name": "BTV", "logo": "https://i.postimg.cc/JnWdHSrq/20250529-071604.png", "url": "https://biostar-tv-world.vercel.app/?id=btv" },
   { "id": "gtv", "name": "GTV", "logo": "https://i.postimg.cc/jjKGfnW8/20250704_201040.png", "url": "https://biostar-tv-world.vercel.app/?id=gtv" },
   { "id": "t-sports-hd", "name": "T Sports HD", "logo": "https://i.postimg.cc/VL5yTtwr/20250707_141739.png", "url": "https://biostar-tv-world.vercel.app/?id=t-sports-hd" },
-  // ... বাকি সব চ্যানেল এখানে যুক্ত করুন
+  // ... এখানে আপনার বাকি সব চ্যানেল লিস্ট কপি করে দিন
 ];
 
 let currentIndex = 0;
@@ -13,12 +12,11 @@ let player = null;
 function loadChannel(index) {
   currentIndex = index;
   const channel = channels[currentIndex];
-  
+
   if (player) {
     player.destroy(); // পুরনো মেমোরি ক্লিয়ার করা
   }
 
-  // প্লেয়ার সেটআপ
   player = new Clappr.Player({
     source: channel.url,
     parentId: "#player",
@@ -32,8 +30,13 @@ function loadChannel(index) {
       hlsjsConfig: {
         maxBufferSize: 0,
         maxBufferLength: 10,
-        liveSyncDurationCount: 3,
-        enableWorker: true // পারফরম্যান্স বাড়াবে
+        enableWorker: true
+      }
+    },
+    events: {
+      onError: function(e) {
+        console.log("Retrying...");
+        player.configure({source: channel.url});
       }
     }
   });
@@ -42,7 +45,6 @@ function loadChannel(index) {
 }
 
 function updateActiveUI() {
-  // লিস্টে একটিভ চ্যানেল হাইলাইট করা
   const items = document.querySelectorAll('#channelList li');
   items.forEach((item, idx) => {
     item.classList.toggle('active', idx === currentIndex);
@@ -68,22 +70,22 @@ function searchChannels() {
 }
 
 function nextChannel() {
-  let next = (currentIndex + 1) % channels.length;
-  loadChannel(next);
+  currentIndex = (currentIndex + 1) % channels.length;
+  loadChannel(currentIndex);
 }
 
 function prevChannel() {
-  let prev = (currentIndex - 1 + channels.length) % channels.length;
-  loadChannel(prev);
+  currentIndex = (currentIndex - 1 + channels.length) % channels.length;
+  loadChannel(currentIndex);
 }
 
-// কিবোর্ড কন্ট্রোল
+// কিবোর্ড সাপোর্ট
 document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowUp') prevChannel();
   if (e.key === 'ArrowDown') nextChannel();
 });
 
-// ইনিশিয়াল লোড
+// প্রথম চ্যানেল চালানো
 window.onload = () => {
   renderChannelList();
   loadChannel(0);
