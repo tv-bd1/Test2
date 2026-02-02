@@ -1,6 +1,6 @@
 body {
   margin: 0;
-  font-family: 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Segoe UI', Arial, sans-serif;
   background: #0a0a0a;
   color: white;
   overflow: hidden;
@@ -13,6 +13,7 @@ body {
 
 .sidebar {
   width: 280px;
+  height: 100%;
   background: #161616;
   padding: 15px;
   display: flex;
@@ -35,8 +36,12 @@ body {
   outline: none;
 }
 
-#searchInput:focus {
-  border-color: #ff5722;
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ff5722;
 }
 
 .sidebar ul {
@@ -46,7 +51,6 @@ body {
   flex-grow: 1;
 }
 
-/* চ্যানেল লিস্ট ডিজাইন */
 .sidebar li {
   display: flex;
   align-items: center;
@@ -54,9 +58,8 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   border-radius: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   background: #222;
-  font-size: 14px;
 }
 
 .sidebar li:hover {
@@ -70,8 +73,8 @@ body {
 }
 
 .sidebar img {
-  height: 35px; 
-  width: 35px; 
+  height: 40px; 
+  width: 40px; 
   margin-right: 12px;
   border-radius: 6px;
   background: white;
@@ -87,15 +90,16 @@ body {
 
 #player {
   flex-grow: 1;
-  background: radial-gradient(circle, #1a1a1a 0%, #000000 100%);
+  background: #000 url('https://i.gifer.com/ZZ5H.gif') center no-repeat;
+  background-size: 50px;
 }
 
 .marquee-container {
   display: flex;
   align-items: center;
   background: #1a1a1a;
-  padding: 8px 15px;
-  border-top: 1px solid #333;
+  padding: 8px 10px;
+  border-top: 1px solid #ff5722;
 }
 
 .bell-icon { color: #ff5722; margin-right: 10px; }
@@ -103,7 +107,7 @@ body {
 .controls {
   background: #111;
   padding: 15px;
-  gap: 10px;
+  text-align: center;
 }
 
 .controls button {
