@@ -4,7 +4,7 @@ const channels = [
     "name": "2026)",
     "logo": "https://www.fancode.com/skillup-uploads/cms-media/140086_5928_RLS_DW_FC-Web_1769807667662.jpg",
     "category": "Fancode",
-    "url": "https://biostar-tv-world.vercel.app/?id=2026"
+    "url": "https://owrcovcrpy.gpcdn.net/bpk-tv/1716/output/index.m3u8"
   },
   {
     "id": "btv",
