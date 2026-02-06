@@ -2,123 +2,117 @@ let channels = [];
 let currentChannel = 0;
 let player = null;
 
-// M3U ফাইল থেকে ডেটা লোড করার ফাংশন (CORS Proxy যুক্ত)
-async function loadM3UFromURL(url) {
-  try {
-    // CORS সমস্যা এড়াতে প্রক্সি ব্যবহার করা হয়েছে
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error('Network response was not ok');
-    
-    const result = await response.json();
-    const data = result.contents; // Proxy থেকে আসা টেক্সট ডাটা
-    
+// M3U ফাইল থেকে ডেটা লোড করার ফাংশন
+async function loadM3U() {
+    const m3uUrl = 'https://sonamul4545.vercel.app/siyam3535.m3u';
+    // CORS সমস্যা সমাধানের জন্য অল-অরিজিন প্রক্সি
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(m3uUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const data = await response.json();
+        const content = data.contents; // এখানে আসল M3U টেক্সট থাকে
+        
+        parseM3U(content);
+    } catch (error) {
+        console.error("Error loading M3U:", error);
+        document.getElementById("channelList").innerHTML = '<li>প্লেলিস্ট লোড হতে সমস্যা হয়েছে</li>';
+    }
+}
+
+// M3U টেক্সট পার্স করার ফাংশন
+function parseM3U(data) {
     const lines = data.split('\n');
-    channels = []; 
+    channels = [];
 
     for (let i = 0; i < lines.length; i++) {
-      let line = lines[i].trim();
-      
-      if (line.startsWith('#EXTINF:')) {
-        // লোগো এবং নাম খুঁজে বের করা
-        const nameMatch = line.split(',')[1] || "Unknown Channel";
-        const logoMatch = line.match(/tvg-logo="([^"]+)"/);
-        const logo = logoMatch ? logoMatch[1] : 'https://via.placeholder.com/40';
-        
-        const streamUrl = lines[i + 1] ? lines[i + 1].trim() : '';
+        const line = lines[i].trim();
+        if (line.startsWith('#EXTINF:')) {
+            // চ্যানেলের নাম বের করা
+            const name = line.split(',')[1] || "Unknown Channel";
+            
+            // লোগো বের করা
+            const logoMatch = line.match(/tvg-logo="([^"]+)"/);
+            const logo = logoMatch ? logoMatch[1] : 'https://via.placeholder.com/40';
 
-        if (streamUrl && !streamUrl.startsWith('#')) {
-          channels.push({
-            name: nameMatch.trim(),
-            logo: logo,
-            url: streamUrl
-          });
+            // পরের লাইনে URL থাকে
+            const url = lines[i + 1] ? lines[i + 1].trim() : '';
+
+            if (url && !url.startsWith('#')) {
+                channels.push({
+                    name: name,
+                    logo: logo,
+                    url: url
+                });
+            }
         }
-      }
     }
-    
+
     renderChannelList();
     if (channels.length > 0) {
-      loadChannel(channels[0]);
+        loadChannel(channels[0]);
     }
-
-  } catch (error) {
-    console.error("M3U লোড করতে সমস্যা হয়েছে:", error);
-    document.getElementById("channelList").innerHTML = 
-      '<p style="text-align: center; color: #ff5722;">CORS সমস্যার কারণে প্লেলিস্ট লোড করা যায়নি।</p>';
-  }
 }
 
-function loadChannel(channel) {
-  if (player) player.destroy();
-
-  const playerContainer = document.getElementById("player");
-  playerContainer.style.opacity = 0;
-
-  setTimeout(() => {
-    player = new Clappr.Player({
-      source: channel.url,
-      parentId: "#player",
-      width: "100%",
-      height: "100%",
-      autoPlay: true,
-      mute: false,
-      // আপনার index.html এ থাকা প্লাগইনগুলো এখানে ব্যবহার হচ্ছে
-      plugins: [PlaybackRatePlugin, ClapprPipPlugin],
-    });
-    playerContainer.style.opacity = 1;
-  }, 300);
-}
-
+// চ্যানেল লিস্ট ইন্টারফেসে দেখানো
 function renderChannelList(channelArray = channels) {
-  const list = document.getElementById("channelList");
-  list.innerHTML = '';
-  
-  if (channelArray.length === 0) {
-    list.innerHTML = '<p style="text-align: center; color: #888;">কোনো চ্যানেল পাওয়া যায়নি।</p>';
-    return;
-  }
+    const list = document.getElementById("channelList");
+    list.innerHTML = '';
 
-  channelArray.forEach((channel) => {
-    const li = document.createElement("li");
-    li.innerHTML = `<img src="${channel.logo}" onerror="this.src='https://via.placeholder.com/40'"> ${channel.name}`;
-    li.onclick = () => {
-      currentChannel = channels.findIndex(c => c.url === channel.url);
-      loadChannel(channel);
-    };
-    list.appendChild(li);
-  });
+    channelArray.forEach((channel, index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<img src="${channel.logo}" onerror="this.src='https://via.placeholder.com/40'"> ${channel.name}`;
+        li.onclick = () => {
+            currentChannel = channels.findIndex(c => c.url === channel.url);
+            loadChannel(channel);
+        };
+        list.appendChild(li);
+    });
 }
 
+// প্লেয়ারে চ্যানেল লোড করা
+function loadChannel(channel) {
+    if (player) player.destroy();
+
+    player = new Clappr.Player({
+        source: channel.url,
+        parentId: "#player",
+        width: "100%",
+        height: "100%",
+        autoPlay: true,
+        plugins: [PlaybackRatePlugin, ClapprPipPlugin],
+    });
+}
+
+// সার্চ ফাংশন
 function searchChannels() {
-  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-  const filteredChannels = channels.filter(channel => 
-    channel.name.toLowerCase().includes(searchTerm)
-  );
-  renderChannelList(filteredChannels);
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const filteredChannels = channels.filter(channel => 
+        channel.name.toLowerCase().includes(searchTerm)
+    );
+    renderChannelList(filteredChannels);
 }
 
+// নেক্সট এবং প্রিভিয়াস বাটন
 function nextChannel() {
-  if (channels.length === 0) return;
-  currentChannel = (currentChannel + 1) % channels.length;
-  loadChannel(channels[currentChannel]);
+    if (channels.length === 0) return;
+    currentChannel = (currentChannel + 1) % channels.length;
+    loadChannel(channels[currentChannel]);
 }
 
 function prevChannel() {
-  if (channels.length === 0) return;
-  currentChannel = (currentChannel - 1 + channels.length) % channels.length;
-  loadChannel(channels[currentChannel]);
+    if (channels.length === 0) return;
+    currentChannel = (currentChannel - 1 + channels.length) % channels.length;
+    loadChannel(channels[currentChannel]);
 }
 
 // কিবোর্ড কন্ট্রোল
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
-    prevChannel();
-  } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
-    nextChannel();
-  }
+    if (event.key === 'ArrowUp') prevChannel();
+    if (event.key === 'ArrowDown') nextChannel();
 });
 
-// লোড কল
-loadM3UFromURL('https://sonamul4545.vercel.app/siyam3535.m3u');
+// পেজ লোড হলে M3U ফেচ করা শুরু হবে
+loadM3U();
