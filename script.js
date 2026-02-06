@@ -1,81 +1,105 @@
 let channels = [];
-let currentChannel = 0;
+let currentChannelIndex = 0;
 let player = null;
 
-// M3U ফাইল থেকে ডেটা লোড করার ফাংশন
-async function loadM3U() {
-    const m3uUrl = 'https://raw.githubusercontent.com/tvbd/m3uplayer/refs/heads/main/m3u/nexgen.m3u';
-    // CORS সমস্যা সমাধানের জন্য অল-অরিজিন প্রক্সি
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(m3uUrl)}`;
+// পেজ লোড হলে M3U ফেচ করা শুরু হবে
+window.onload = () => {
+    loadM3UFromURL('https://raw.githubusercontent.com/tvbd/m3uplayer/refs/heads/main/m3u/nexgen.m3u');
+};
+
+async function loadM3UFromURL(url) {
+    const listContainer = document.getElementById("channelList");
+    listContainer.innerHTML = '<p style="text-align: center; color: #ff5722;">চ্যানেল লোড হচ্ছে, দয়া করে অপেক্ষা করুন...</p>';
 
     try {
+        // CORS সমস্যা এড়াতে প্রক্সি ব্যবহার করা হয়েছে
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         const response = await fetch(proxyUrl);
+        
         if (!response.ok) throw new Error('Network response was not ok');
         
-        const data = await response.json();
-        const content = data.contents; // এখানে আসল M3U টেক্সট থাকে
-        
-        parseM3U(content);
+        const result = await response.json();
+        const data = result.contents;
+
+        parseM3UData(data);
     } catch (error) {
-        console.error("Error loading M3U:", error);
-        document.getElementById("channelList").innerHTML = '<li>প্লেলিস্ট লোড হতে সমস্যা হয়েছে</li>';
+        console.error("M3U Load Error:", error);
+        listContainer.innerHTML = '<p style="text-align: center; color: #f44336;">লিঙ্ক থেকে ডেটা পাওয়া যায়নি।</p>';
     }
 }
 
-// M3U টেক্সট পার্স করার ফাংশন
-function parseM3U(data) {
+function parseM3UData(data) {
     const lines = data.split('\n');
     channels = [];
 
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
+        let line = lines[i].trim();
+        
         if (line.startsWith('#EXTINF:')) {
             // চ্যানেলের নাম বের করা
-            const name = line.split(',')[1] || "Unknown Channel";
+            const nameParts = line.split(',');
+            const name = nameParts[nameParts.length - 1].trim() || "Unknown Channel";
             
             // লোগো বের করা
             const logoMatch = line.match(/tvg-logo="([^"]+)"/);
             const logo = logoMatch ? logoMatch[1] : 'https://via.placeholder.com/40';
-
+            
             // পরের লাইনে URL থাকে
-            const url = lines[i + 1] ? lines[i + 1].trim() : '';
+            let streamUrl = "";
+            if (lines[i + 1] && !lines[i + 1].startsWith('#')) {
+                streamUrl = lines[i + 1].trim();
+            } else if (lines[i + 2] && !lines[i + 2].startsWith('#')) {
+                streamUrl = lines[i + 2].trim();
+            }
 
-            if (url && !url.startsWith('#')) {
+            if (streamUrl) {
                 channels.push({
                     name: name,
                     logo: logo,
-                    url: url
+                    url: streamUrl
                 });
             }
         }
     }
 
-    renderChannelList();
     if (channels.length > 0) {
-        loadChannel(channels[0]);
+        renderChannelList(channels);
+        loadChannel(0); // প্রথম চ্যানেলটি চালু করা
+    } else {
+        document.getElementById("channelList").innerHTML = '<p style="text-align: center;">কোনো চ্যানেল পাওয়া যায়নি।</p>';
     }
 }
 
-// চ্যানেল লিস্ট ইন্টারফেসে দেখানো
-function renderChannelList(channelArray = channels) {
+function renderChannelList(channelArray) {
     const list = document.getElementById("channelList");
     list.innerHTML = '';
 
     channelArray.forEach((channel, index) => {
         const li = document.createElement("li");
-        li.innerHTML = `<img src="${channel.logo}" onerror="this.src='https://via.placeholder.com/40'"> ${channel.name}`;
+        li.innerHTML = `<img src="${channel.logo}" onerror="this.src='https://via.placeholder.com/40'"> <span>${channel.name}</span>`;
+        
         li.onclick = () => {
-            currentChannel = channels.findIndex(c => c.url === channel.url);
-            loadChannel(channel);
+            currentChannelIndex = channels.findIndex(c => c.url === channel.url);
+            loadChannel(currentChannelIndex);
         };
         list.appendChild(li);
     });
 }
 
-// প্লেয়ারে চ্যানেল লোড করা
-function loadChannel(channel) {
+function loadChannel(index) {
+    if (index < 0 || index >= channels.length) return;
+    
+    const channel = channels[index];
+    currentChannelIndex = index;
+
+    // লিস্টে একটিভ ক্লাস যোগ করা
+    const allListItems = document.querySelectorAll("#channelList li");
+    allListItems.forEach(item => item.classList.remove("active"));
+    if (allListItems[index]) allListItems[index].classList.add("active");
+
     if (player) player.destroy();
 
+    // Clappr Player Setup
     player = new Clappr.Player({
         source: channel.url,
         parentId: "#player",
@@ -83,36 +107,28 @@ function loadChannel(channel) {
         height: "100%",
         autoPlay: true,
         plugins: [PlaybackRatePlugin, ClapprPipPlugin],
+        mediacontrol: {seekbar: "#ff5722", buttons: "#ff5722"},
     });
 }
 
 // সার্চ ফাংশন
 function searchChannels() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const filteredChannels = channels.filter(channel => 
-        channel.name.toLowerCase().includes(searchTerm)
-    );
-    renderChannelList(filteredChannels);
+    const filtered = channels.filter(c => c.name.toLowerCase().includes(searchTerm));
+    renderChannelList(filtered);
 }
 
-// নেক্সট এবং প্রিভিয়াস বাটন
+// নেক্সট/প্রিভিয়াস ফাংশন
 function nextChannel() {
-    if (channels.length === 0) return;
-    currentChannel = (currentChannel + 1) % channels.length;
-    loadChannel(channels[currentChannel]);
+    loadChannel((currentChannelIndex + 1) % channels.length);
 }
 
 function prevChannel() {
-    if (channels.length === 0) return;
-    currentChannel = (currentChannel - 1 + channels.length) % channels.length;
-    loadChannel(channels[currentChannel]);
+    loadChannel((currentChannelIndex - 1 + channels.length) % channels.length);
 }
 
-// কিবোর্ড কন্ট্রোল
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowUp') prevChannel();
-    if (event.key === 'ArrowDown') nextChannel();
+// কিবোর্ড ইভেন্ট
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') nextChannel();
+    if (e.key === 'ArrowUp') prevChannel();
 });
-
-// পেজ লোড হলে M3U ফেচ করা শুরু হবে
-loadM3U();
