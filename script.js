@@ -2,9 +2,8 @@ let channels = [];
 let currentChannelIndex = 0;
 let player = null;
 
-// পেজ লোড হলে M3U লোড হবে
+// পেজ লোড হলে M3U ফাইল নিয়ে আসা
 window.onload = () => {
-    // সরাসরি GitHub লিঙ্ক ব্যবহার না করে AllOrigins প্রক্সি দিয়ে কল করছি
     fetchM3U('https://raw.githubusercontent.com/tvbd/m3uplayer/refs/heads/main/m3u/nexgen.m3u');
 };
 
@@ -13,18 +12,15 @@ async function fetchM3U(url) {
     listContainer.innerHTML = '<li>চ্যানেল লোড হচ্ছে...</li>';
 
     try {
-        // প্রক্সি ছাড়া সরাসরি GitHub অনেক সময় ব্লক করে, তাই এই লিঙ্কটি ব্যবহার করুন
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         const response = await fetch(proxyUrl);
         const result = await response.json();
-        const rawData = result.contents;
-
-        if (!rawData) throw new Error("No data found");
-
-        parseM3U(rawData);
+        
+        if (result.contents) {
+            parseM3U(result.contents);
+        }
     } catch (error) {
-        console.error("Error:", error);
-        listContainer.innerHTML = '<li>প্লেলিস্ট লোড করা যায়নি। ইন্টারনেটের সমস্যা হতে পারে।</li>';
+        listContainer.innerHTML = '<li>লোডিং এরর! দয়া করে রিফ্রেশ দিন।</li>';
     }
 }
 
@@ -35,20 +31,13 @@ function parseM3U(data) {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i].trim();
         if (line.startsWith('#EXTINF:')) {
-            // নাম বের করা (কমা চিহ্নের পরের অংশ)
             const name = line.split(',')[1] || "Unknown Channel";
-            
-            // লোগো বের করা
             const logoMatch = line.match(/tvg-logo="([^"]+)"/);
             const logo = logoMatch ? logoMatch[1] : 'https://via.placeholder.com/40';
-
-            // পরের লাইন বা তার পরের লাইনে URL খোঁজা
+            
             let streamUrl = "";
-            for (let j = i + 1; j <= i + 2; j++) {
-                if (lines[j] && lines[j].trim().startsWith('http')) {
-                    streamUrl = lines[j].trim();
-                    break;
-                }
+            if (lines[i+1] && !lines[i+1].startsWith('#')) {
+                streamUrl = lines[i+1].trim();
             }
 
             if (streamUrl) {
@@ -56,7 +45,6 @@ function parseM3U(data) {
             }
         }
     }
-
     renderChannels();
 }
 
@@ -67,45 +55,47 @@ function renderChannels(data = channels) {
     data.forEach((channel, index) => {
         const li = document.createElement("li");
         li.innerHTML = `<img src="${channel.logo}" onerror="this.src='https://via.placeholder.com/40'"> <span>${channel.name}</span>`;
-        li.onclick = () => {
-            currentChannelIndex = index;
-            loadPlayer(channel.url);
-        };
+        li.onclick = () => playChannel(index);
         list.appendChild(li);
     });
 
-    if (channels.length > 0 && !player) {
-        loadPlayer(channels[0].url); // প্রথম চ্যানেল লোড হবে
+    if (channels.length > 0) playChannel(0); // অটোমেটিক প্রথম চ্যানেল চালু
+}
+
+function playChannel(index) {
+    const channel = channels[index];
+    currentChannelIndex = index;
+    
+    const clapprElement = document.getElementById("player");
+    const iframeElement = document.getElementById("web-player");
+
+    // যদি লিঙ্কটি .m3u8 হয়, তবে Clappr চালাও
+    if (channel.url.includes(".m3u8")) {
+        iframeElement.style.display = "none";
+        clapprElement.style.display = "block";
+        
+        if (player) player.destroy();
+        player = new Clappr.Player({
+            source: channel.url,
+            parentId: "#player",
+            width: "100%",
+            height: "100%",
+            autoPlay: true,
+            plugins: [PlaybackRatePlugin, ClapprPipPlugin]
+        });
+    } 
+    // অন্য সব সাধারণ লিঙ্ক (যেমন Vercel লিঙ্ক) এর জন্য Iframe চালাও
+    else {
+        if (player) player.destroy();
+        clapprElement.style.display = "none";
+        iframeElement.style.display = "block";
+        iframeElement.src = channel.url;
     }
 }
 
-function loadPlayer(url) {
-    if (player) player.destroy();
-    
-    player = new Clappr.Player({
-        source: url,
-        parentId: "#player",
-        width: "100%",
-        height: "100%",
-        autoPlay: true,
-        plugins: [PlaybackRatePlugin, ClapprPipPlugin],
-        hlsjsConfig: {
-            enableWorker: true
-        }
-    });
-}
-
-// আপনার index.html-এ থাকা বাটনগুলোর জন্য ফাংশন
-function nextChannel() {
-    currentChannelIndex = (currentChannelIndex + 1) % channels.length;
-    loadPlayer(channels[currentChannelIndex].url);
-}
-
-function prevChannel() {
-    currentChannelIndex = (currentChannelIndex - 1 + channels.length) % channels.length;
-    loadPlayer(channels[currentChannelIndex].url);
-}
-
+// নেক্সট, প্রিভিয়াস এবং সার্চ ফাংশন
+function nextChannel() { playChannel((currentChannelIndex + 1) % channels.length); }
+function prevChannel() { playChannel((currentChannelIndex - 1 + channels.length) % channels.length); }
 function searchChannels() {
     const query = document.getElementById('searchInput').value.toLowerCase();
     const filtered = channels.filter(c => c.name.toLowerCase().includes(query));
