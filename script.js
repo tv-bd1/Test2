@@ -1,26 +1,18 @@
 let channels = [];
-let currentChannelIndex = 0;
-let player = null;
-
-// পেজ লোড হলে M3U ফাইল নিয়ে আসা
-window.onload = () => {
-    fetchM3U('https://raw.githubusercontent.com/tvbd/m3uplayer/refs/heads/main/m3u/nexgen.m3u');
-};
 
 async function fetchM3U(url) {
-    const listContainer = document.getElementById("channelList");
-    listContainer.innerHTML = '<li>চ্যানেল লোড হচ্ছে...</li>';
-
     try {
+        // GitHub direct block এড়াতে AllOrigins proxy ব্যবহার করা
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         const response = await fetch(proxyUrl);
         const result = await response.json();
-        
-        if (result.contents) {
-            parseM3U(result.contents);
-        }
+        const rawData = result.contents;
+
+        if (!rawData) throw new Error("No data found");
+
+        parseM3U(rawData);
     } catch (error) {
-        listContainer.innerHTML = '<li>লোডিং এরর! দয়া করে রিফ্রেশ দিন।</li>';
+        console.error("M3U fetch error:", error);
     }
 }
 
@@ -29,75 +21,32 @@ function parseM3U(data) {
     channels = [];
 
     for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].trim();
+        const line = lines[i].trim();
         if (line.startsWith('#EXTINF:')) {
+            // চ্যানেল নাম
             const name = line.split(',')[1] || "Unknown Channel";
+
+            // চ্যানেল লোগো
             const logoMatch = line.match(/tvg-logo="([^"]+)"/);
             const logo = logoMatch ? logoMatch[1] : 'https://via.placeholder.com/40';
-            
-            let streamUrl = "";
-            if (lines[i+1] && !lines[i+1].startsWith('#')) {
-                streamUrl = lines[i+1].trim();
+
+            // স্ট্রিম URL (পরবর্তী ২ লাইনে খুঁজবে)
+            let url = "";
+            for (let j = i + 1; j <= i + 2; j++) {
+                if (lines[j] && lines[j].trim().startsWith('http')) {
+                    url = lines[j].trim();
+                    break;
+                }
             }
 
-            if (streamUrl) {
-                channels.push({ name, logo, url: streamUrl });
+            if (url) {
+                channels.push({ name, logo, url });
             }
         }
     }
-    renderChannels();
+
+    console.log("চ্যানেল লিস্ট:", channels);
 }
 
-function renderChannels(data = channels) {
-    const list = document.getElementById("channelList");
-    list.innerHTML = '';
-
-    data.forEach((channel, index) => {
-        const li = document.createElement("li");
-        li.innerHTML = `<img src="${channel.logo}" onerror="this.src='https://via.placeholder.com/40'"> <span>${channel.name}</span>`;
-        li.onclick = () => playChannel(index);
-        list.appendChild(li);
-    });
-
-    if (channels.length > 0) playChannel(0); // অটোমেটিক প্রথম চ্যানেল চালু
-}
-
-function playChannel(index) {
-    const channel = channels[index];
-    currentChannelIndex = index;
-    
-    const clapprElement = document.getElementById("player");
-    const iframeElement = document.getElementById("web-player");
-
-    // যদি লিঙ্কটি .m3u8 হয়, তবে Clappr চালাও
-    if (channel.url.includes(".m3u8")) {
-        iframeElement.style.display = "none";
-        clapprElement.style.display = "block";
-        
-        if (player) player.destroy();
-        player = new Clappr.Player({
-            source: channel.url,
-            parentId: "#player",
-            width: "100%",
-            height: "100%",
-            autoPlay: true,
-            plugins: [PlaybackRatePlugin, ClapprPipPlugin]
-        });
-    } 
-    // অন্য সব সাধারণ লিঙ্ক (যেমন Vercel লিঙ্ক) এর জন্য Iframe চালাও
-    else {
-        if (player) player.destroy();
-        clapprElement.style.display = "none";
-        iframeElement.style.display = "block";
-        iframeElement.src = channel.url;
-    }
-}
-
-// নেক্সট, প্রিভিয়াস এবং সার্চ ফাংশন
-function nextChannel() { playChannel((currentChannelIndex + 1) % channels.length); }
-function prevChannel() { playChannel((currentChannelIndex - 1 + channels.length) % channels.length); }
-function searchChannels() {
-    const query = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = channels.filter(c => c.name.toLowerCase().includes(query));
-    renderChannels(filtered);
-}
+// ব্যবহার:
+fetchM3U('https://raw.githubusercontent.com/tvbd/m3uplayer/refs/heads/main/m3u/nexgen.m3u');
