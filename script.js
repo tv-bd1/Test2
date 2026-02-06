@@ -4,7 +4,7 @@ let player = null;
 
 // M3U ফাইল থেকে ডেটা লোড করার ফাংশন
 async function loadM3U() {
-    const m3uUrl = 'https://sonamul4545.vercel.app/siyam3535.m3u';
+    const m3uUrl = 'https://raw.githubusercontent.com/tvbd/m3uplayer/refs/heads/main/m3u/nexgen.m3u';
     // CORS সমস্যা সমাধানের জন্য অল-অরিজিন প্রক্সি
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(m3uUrl)}`;
 
