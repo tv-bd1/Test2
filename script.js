@@ -4,7 +4,7 @@ const channels = [
     "name": "2026)",
     "logo": "https://www.fancode.com/skillup-uploads/cms-media/140086_5928_RLS_DW_FC-Web_1769807667662.jpg",
     "category": "Fancode",
-    "url": "https://owrcovcrpy.gpcdn.net/bpk-tv/1716/output/index.m3u8"
+    "url": "https://biostar-tv-world.vercel.app/?id=2026"
   },
   {
     "id": "btv",
@@ -922,23 +922,17 @@ const channels = [
     "logo": "https://tvassets.roarzone.info/images/bijoy-tv.jpg",
     "category": "bangla",
     "url": "https://biostar-tv-world.vercel.app/?id=bijoy-tv"
-    
   }
-];
+],
 
 let currentChannel = 0;
 let player = null;
-let displayedChannels = [...channels]; // সার্চের সময় এটি আপডেট হবে
 
 function loadChannel(channel) {
-  if (player) {
-    player.destroy();
-  }
+  if (player) player.destroy();
 
-  const playerContainer = document.getElementById("player");
-  playerContainer.style.opacity = 0;
+  document.getElementById("player").style.opacity = 0;
 
-  // Clappr প্লেয়ার সেটআপ
   setTimeout(() => {
     player = new Clappr.Player({
       source: channel.url,
@@ -947,78 +941,59 @@ function loadChannel(channel) {
       height: "100%",
       autoPlay: true,
       mute: false,
-      // লোডিং ইরর হ্যান্ডেল করার জন্য
-      events: {
-        onError: function(e) {
-          console.error("চ্যানেল লোড হতে সমস্যা হচ্ছে:", e);
-        }
-      }
     });
-    playerContainer.style.opacity = 1;
+    document.getElementById("player").style.opacity = 1;
   }, 300);
+}
+
+function searchChannels() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  const filteredChannels = channels.filter(channel => 
+    channel.name.toLowerCase().includes(searchTerm)
+  );
+  renderChannelList(filteredChannels);
 }
 
 function renderChannelList(channelArray = channels) {
   const list = document.getElementById("channelList");
   list.innerHTML = '';
-  
-  displayedChannels = channelArray; // বর্তমানে প্রদর্শিত লিস্ট আপডেট রাখা
-
   if (channelArray.length === 0) {
-    list.innerHTML = '<p style="text-align: center; color: #888;">কোনো চ্যানেল পাওয়া যায়নি।</p>';
+    list.innerHTML = '<p style="text-align: center; color: #888;">কোনো চ্যানেল নেই।</p>';
     return;
   }
-
-  channelArray.forEach((channel, index) => {
+  channelArray.forEach((channel) => {
     const li = document.createElement("li");
-    // একটি 'active' ক্লাস যোগ করা যেতে পারে বর্তমান চ্যানেলের জন্য
-    li.className = (channels[currentChannel].id === channel.id) ? "active" : "";
-    li.innerHTML = `<img src="${channel.logo}" alt="${channel.name}" onerror="this.src='default-logo.png'"> ${channel.name}`;
-    
+    li.innerHTML = `<img src="${channel.logo}" alt=""> ${channel.name}`;
     li.onclick = () => {
-      currentChannel = channels.findIndex(c => c.id === channel.id);
+      currentChannel = channels.findIndex(c => c.name === channel.name);
       loadChannel(channel);
-      renderChannelList(displayedChannels); // হাইলাইট আপডেট করতে পুনরায় রেন্ডার
     };
     list.appendChild(li);
   });
-}
-
-function searchChannels() {
-  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-  const filtered = channels.filter(channel => 
-    channel.name.toLowerCase().includes(searchTerm) || 
-    channel.category.toLowerCase().includes(searchTerm)
-  );
-  renderChannelList(filtered);
 }
 
 function nextChannel() {
   if (channels.length === 0) return;
   currentChannel = (currentChannel + 1) % channels.length;
   loadChannel(channels[currentChannel]);
-  renderChannelList(displayedChannels);
 }
 
 function prevChannel() {
   if (channels.length === 0) return;
   currentChannel = (currentChannel - 1 + channels.length) % channels.length;
   loadChannel(channels[currentChannel]);
-  renderChannelList(displayedChannels);
 }
 
-// ইনিশিয়ালাইজেশন
-document.addEventListener('DOMContentLoaded', () => {
-  renderChannelList();
-  if (channels.length > 0) {
-    loadChannel(channels[currentChannel]);
-  }
-});
 
-// কিবোর্ড নেভিগেশন
+renderChannelList();
+
+// প্রাথমিক অবস্থায় প্রথম চ্যানেল চালু করা
+if (channels.length > 0) {
+  loadChannel(channels[currentChannel]);
+}
+
+// Add keyboard event listener for arrow keys
 document.addEventListener('keydown', (event) => {
-  if (event.target.tagName === 'INPUT') return; // সার্চ বক্সে টাইপ করার সময় চ্যানেল বদলাবে না
-  
   if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
     prevChannel();
   } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
